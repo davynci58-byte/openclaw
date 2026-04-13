@@ -58,11 +58,6 @@ def get_client():
     return client
 
 
-def get_post_uri(client, post_id):
-    """Get the AT URI for a post"""
-    return f"at://{post_id}/app.bsky.feed.post/{post_id}"
-
-
 def upload_image(client, image_path):
     """Upload an image to Bluesky and return the blob reference"""
     if not os.path.exists(image_path):
@@ -208,7 +203,9 @@ def like_post(post_uri):
     """Like a specific post by URI"""
     client = get_client()
     try:
-        like = client.like(uri=post_uri)
+        # Fetch post to get CID
+        post = client.get_post(uri=post_uri)
+        like = client.like(uri=post_uri, cid=post.cid)
         print(f"[SUCCESS] Post liked!")
         print(f"  Like URI: {like.uri}")
         return like
@@ -221,7 +218,9 @@ def repost_post(post_uri):
     """Repost a specific post by URI"""
     client = get_client()
     try:
-        repost = client.repost(uri=post_uri)
+        # Fetch post to get CID
+        post = client.get_post(uri=post_uri)
+        repost = client.repost(uri=post_uri, cid=post.cid)
         print(f"[SUCCESS] Post reposted!")
         print(f"  Repost URI: {repost.uri}")
         return repost

@@ -28,6 +28,8 @@ except ImportError:
     print("ERROR: MCP package not installed. Install with: pip install mcp")
     sys.exit(1)
 
+# Global client (initialized once at startup)
+_client = None
 
 def load_credentials():
     """Load credentials from credentials.json file"""
@@ -41,11 +43,13 @@ def load_credentials():
 
 
 def get_client():
-    """Initialize and return authenticated Bluesky client"""
-    username, password = load_credentials()
-    client = Client()
-    client.login(username, password)
-    return client
+    """Initialize and return authenticated Bluesky client (singleton)"""
+    global _client
+    if _client is None:
+        username, password = load_credentials()
+        _client = Client()
+        _client.login(username, password)
+    return _client
 
 
 def upload_image(client, image_path):
@@ -371,7 +375,7 @@ def format_thread(item, indent=0):
         "display_name": author.display_name,
         "text": post.record.text,
         "likes": post.like_count,
-        "replies": post.reply_count,
+        "reply_count": post.reply_count,
         "created_at": post.record.created_at,
         "uri": post.uri
     }
@@ -478,7 +482,9 @@ async def call_tool(name: str, arguments: dict):
         
         elif name == "bluesky_like":
             post_uri = arguments["post_uri"]
-            like = client.like(uri=post_uri)
+            # Fetch post to get CID
+            post = client.get_post(uri=post_uri)
+            like = client.like(uri=post_uri, cid=post.cid)
             
             return [TextContent(type="text", text=json.dumps({
                 "success": True,
@@ -487,7 +493,9 @@ async def call_tool(name: str, arguments: dict):
         
         elif name == "bluesky_repost":
             post_uri = arguments["post_uri"]
-            repost = client.repost(uri=post_uri)
+            # Fetch post to get CID
+            post = client.get_post(uri=post_uri)
+            repost = client.repost(uri=post_uri, cid=post.cid)
             
             return [TextContent(type="text", text=json.dumps({
                 "success": True,
